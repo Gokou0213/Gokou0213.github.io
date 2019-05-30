@@ -58,15 +58,15 @@
     <script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
     <script>
         $().ready(function(){
-            $.get("https://api.github.com/repos/Gokou0213/Gokou0213.github.io/issues/1/comments?per_page=1000000",function(data){
-                var sumTime = 0
-                var resList = []
-                var avgTime = []
-                var effectiveCount = 0
-                var overTimeCount = 0
-                var normalCount = 0
-                var guguCount = 0
+            var sumTime = 0
+            var resList = []
+            var avgTime = []
+            var effectiveCount = 0
+            var overTimeCount = 0
+            var normalCount = 0
+            var guguCount = 0
 
+            getIssue(1,function(data){
                 data.forEach(item=>{
                     var res = parseIssue(item.body)
                     if(res.intTime !== undefined){
@@ -110,6 +110,22 @@
             })
         })
         
+        function getIssue(page,cbk,dat){
+            $.get("https://api.github.com/repos/Gokou0213/Gokou0213.github.io/issues/1/comments?page=" + page + "&per_page=100",function(data){
+                if(dat === undefined){
+                    dat = []
+                }
+
+                dat = dat.concat(data)
+
+                if(data.length === 0){
+                    cbk(dat)
+                } else {
+                    getIssue(++page,cbk,dat)
+                }
+            })
+        }
+
         function parseIssue(data){
             var parseToLine = data.split('\r\n')
             var res = {}
