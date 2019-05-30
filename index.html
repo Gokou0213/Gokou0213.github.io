@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <link href="https://cdn.bootcss.com/twitter-bootstrap/3.4.1/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <style>
+        .font-color-red{
+            color:red
+        }
+        .font-color-green{
+            color:green
+        }
+        .main{
+            max-width: 1280px;
+            display: block;
+            margin: 0 auto;
+        }
+        .subtitle{
+            display: block;
+            line-height: 50px;
+        }
+        .subtitle p{
+            font-size: 18px;
+            display: inline;
+            margin-right:15px;
+        }
+        .subtitle h5{
+            display: inline;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .title{
+            text-align: center
+        }
+    </style>
+    <body>
+        <div class="main">
+            <h2 class="title">李总下班日志</h2>
+            <div class="subtitle">
+                <h5>李总平均下班时间:</h5><p id="avgOffWork"></p>
+                <h5>加班辽:</h5><p id="overTimeCount"></p>
+                <h5>正常下班:</h5><p id="normalCount"></p>
+                <h5>没上班:</h5><p id="guguCount"></p>
+            </div>
+            <table class="table table-striped">
+                <tbody id="table">
+                    <tr>
+                        <th>日期</th>
+                        <th>时间</th>
+                        <th>内容</th>
+                        <th>加班了吗？</th>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </body>
+    <script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
+    <script>
+        $().ready(function(){
+            $.get("https://api.github.com/repos/Gokou0213/Gokou0213.github.io/issues/1/comments",function(data){
+                var sumTime = 0
+                var resList = []
+                var avgTime = []
+                var effectiveCount = 0
+                var overTimeCount = 0
+                var normalCount = 0
+                var guguCount = 0
+
+                data.forEach(item=>{
+                    var res = parseIssue(item.body)
+                    if(res.intTime !== undefined){
+                        sumTime += res.intTime
+                        effectiveCount++
+                    }
+                    resList.push(res)
+                })
+
+                resList = resList.reverse()
+                avgTime = sumTime / effectiveCount
+
+                //计算平均下班时间
+                $("#avgOffWork").text(intToTime(parseInt(avgTime)))
+
+                resList.forEach(item=>{
+                    var htmlStr = ''
+
+                    htmlStr += '<tr>' + '<td>' + item.date + '</td>' + '<td>' + item.time + '</td>' + '<td>' + item.content + '</td>'
+                    if(item.intTime === undefined){
+                        htmlStr += '<td>没上班</td>'
+                    } else {
+                        htmlStr += '<td class="font-color-' + (item.intTime > avgTime ? 'red':'green') + '">' + (item.intTime > avgTime ? "加班了":"没加班") + "</td>"
+                    }
+                    
+                    $("#table").append(htmlStr)
+
+                    if(item.intTime === undefined){
+                        guguCount++
+                    } else if(item.intTime > avgTime) {
+                        overTimeCount++
+                    } else {
+                        normalCount++
+                    }
+                })
+
+                //给正常上班 加班 不上班赋值
+                $("#overTimeCount").text(overTimeCount)
+                $("#normalCount").text(normalCount)
+                $("#guguCount").text(guguCount)
+            })
+        })
+        
+        function parseIssue(data){
+            var parseToLine = data.split('\r\n')
+            var res = {}
+            var parser = {
+                '日期':function(obj,value){
+                    obj.date = value
+                },
+                '时间':function(obj,value){
+                    obj.time = value
+                    if(value === 'none'){
+                        obj.intTime = undefined
+                    } else {
+                        obj.intTime = timeToInt(value)
+                    }
+                },
+                '内容':function(obj,value){
+                    obj.content = value
+                }
+            }
+
+            parseToLine.forEach(strToLine=>{
+                try{
+                    var keyValue = strToLine.split('=')
+                    var key = keyValue[0]
+                    var value = keyValue[1]
+
+                    parser[key](res,value)
+
+                } catch(e){
+                    console.log(e)
+                }
+            })
+
+            return res
+        }
+        
+        function timeToInt(value){
+            var valueToArray = value.split(':');
+            var res = 0
+            res += Number(valueToArray[0]) * 60 * 60
+            res += Number(valueToArray[1]) * 60
+            res += Number(valueToArray[2])
+
+            return res
+        }
+
+        function intToTime(value){
+            var res = ''
+
+            res += intFormat((parseInt(value / (60 * 60))),2) + ":"
+            res += intFormat((parseInt((value % (60 * 60)) / 60)),2) + ":"
+            res += intFormat(parseInt(value % 60),2)
+
+            return res
+        }
+
+        function intFormat(value,length){
+            return (Array(length).join('0') + value).slice(-length)
+        }
+
+    </script>
+</html>
